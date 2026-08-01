@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineEmits<{ navigate: [view: 'map' | 'routes'] }>()
 </script>
 
 <template>
@@ -7,8 +8,8 @@
       <h1>HikePlanner</h1>
     </div>
     <nav class="nav-bar">
-      <a href="#">Map</a>
-      <a href="#">My Routes</a>
+      <a href="#" @click.prevent="$emit('navigate', 'map')">Map</a>
+      <a href="#" @click.prevent="$emit('navigate', 'routes')">My Routes</a>
       <a href="#">About</a>
     </nav>
   </header>

@@ -1,14 +1,19 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
 import MapView from './components/MapView.vue'
+import MyRoutesView from './components/MyRoutesView.vue'
+
+const currentView = ref<'map' | 'routes'>('map')
 </script>
 
 <template>
   <div class="app-layout">
-    <AppHeader />
+    <AppHeader @navigate="currentView = $event" />
     <main class="app-main">
-      <MapView />
+      <MapView v-show="currentView === 'map'" />
+      <MyRoutesView v-if="currentView === 'routes'" />
     </main>
     <AppFooter />
   </div>
@@ -23,6 +28,6 @@ import MapView from './components/MapView.vue'
 
 .app-main {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
 }
 </style>

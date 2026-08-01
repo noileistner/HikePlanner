@@ -19,6 +19,40 @@ function haversine(a: L.LatLng, b: L.LatLng): number {
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
+const OVERPASS_MIRRORS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+]
+
+async function queryOverpass(query: string): Promise<any> {
+  let lastError: unknown = null
+
+  for (const url of OVERPASS_MIRRORS) {
+    try {
+      console.log(`[Overpass] Trying ${url}...`)
+      console.time(`[Overpass] fetch (${url})`)
+
+      const response = await fetch(url, { method: 'POST', body: query })
+
+      console.timeEnd(`[Overpass] fetch (${url})`)
+
+      if (!response.ok) {
+        console.warn(`[Overpass] ${url} returned ${response.status}, trying next mirror...`)
+        lastError = new Error(`Overpass API error: ${response.status}`)
+        continue
+      }
+
+      return await response.json()
+    } catch (err) {
+      console.warn(`[Overpass] ${url} failed:`, err)
+      lastError = err
+    }
+  }
+
+  throw lastError ?? new Error('All Overpass mirrors failed')
+}
+
 export async function fetchWalkingGraph(
   bounds: L.LatLngBounds
 ): Promise<{ graph: Graph; nodes: Record<string, OsmNode> }> {
@@ -36,11 +70,8 @@ export async function fetchWalkingGraph(
     out skel qt;
   `
 
-  const response = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: query,
-  })
-  const data = await response.json()
+  console.log(`[Overpass] Fetching graph for bounds:`, sw, ne)
+  const data = await queryOverpass(query)
 
   const nodes: Record<string, OsmNode> = {}
   const graph: Graph = {}
@@ -63,11 +94,12 @@ export async function fetchWalkingGraph(
 
         const dist = haversine(L.latLng(a.lat, a.lon), L.latLng(b.lat, b.lon))
         graph[aId].push({ to: bId, weight: dist })
-        graph[bId].push({ to: aId, weight: dist }) // treat paths as bidirectional
+        graph[bId].push({ to: aId, weight: dist })
       }
     }
   }
 
+  console.log(`[Overpass] Graph built: ${Object.keys(nodes).length} nodes`)
   return { graph, nodes }
 }
 
